@@ -1,0 +1,14 @@
+$TTL 86400
+$ORIGIN test.cynapse.ai.
+@       IN      SOA     ns1.test.cynapse.ai. info.test.cynapse.ai. (
+                                2023062101 
+                                3600       
+                                1800       
+                                604800     
+                                86400      
+                        )
+        IN      NS      ns1.test.cynapse.ai.
+@       IN      A       192.168.77.119
+ns1     IN      A       192.168.77.119
+test1   IN      A       192.168.77.109
+test2   IN      A       192.168.77.109

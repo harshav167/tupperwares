@@ -1,0 +1,17 @@
+$TTL 2d
+
+$ORIGIN test.cynapse.ai.
+
+@             IN     SOA    ns.test.cynapse.ai. info.cynapse.ai. (
+                            2022121900     ; serial
+                            12h            ; refresh
+                            15m            ; retry
+                            3w             ; expire
+                            2h )           ; minimum TTL
+
+              IN     NS     ns.test.cynapse.ai.
+
+ns            IN     A      172.20.0.2
+
+test1         IN     A      192.168.77.109
+test2         IN     A      192.168.77.119

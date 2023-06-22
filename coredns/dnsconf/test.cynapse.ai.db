@@ -1,0 +1,3 @@
+test.cynapse.ai.        IN  SOA dns.test.cynapse.ai. robbmanes.cynapse.ai. 2015082541 7200 3600 1209600 3600
+dns.test.cynapse.ai. IN A 192.168.77.64
+test1.test.cynapse.ai.   IN  A 192.168.77.109

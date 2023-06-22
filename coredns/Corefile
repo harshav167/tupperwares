@@ -1,0 +1,21 @@
+. {
+    log
+    errors
+    forward . 8.8.8.8 8.8.4.4 {
+        force_tcp
+    }
+    cache
+    reload
+}
+
+test.cynpase.ai {
+    log
+    errors
+    file /etc/coredns/test.cynapse.ai.db {
+        transfer to *
+    }
+    reload
+    hosts {
+    test1.test.cynapse.ai 192.168.77.109
+    }
+}
