@@ -11,7 +11,7 @@ $ORIGIN test.cynapse.ai.
 
               IN     NS     ns.test.cynapse.ai.
 
-ns            IN     A      172.20.0.2
+ns            IN     A      192.168.1.106
 
-test1         IN     A      192.168.77.109
-test2         IN     A      192.168.77.119
+test1         IN     A      192.53.113.70
+
