@@ -1,0 +1,15 @@
+version: '3.9'
+services:
+    filebrowser:
+        image: 'filebrowser/filebrowser:s6'
+        ports:
+            - '8080:80'
+        environment:
+            - PGID=$(id
+            - PUID=$(id
+        user: \
+        volumes:
+            - './settings.json:/config/settings.json'
+            - './/filebrowser.db:/database/filebrowser.db'
+            - '/mnt/drives:/srv'
+
