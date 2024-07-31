@@ -1,0 +1,291 @@
+services:
+  registry:
+    image: docker.io/bitnami/harbor-registry:2
+    restart: unless-stopped
+    environment:
+      - REGISTRY_HTTP_SECRET=CHANGEME
+    volumes:
+      - registry_data:/storage
+      - ./config/registry/:/etc/registry/:ro
+    networks:
+      - bw-services
+  registryctl:
+    image: docker.io/bitnami/harbor-registryctl:2
+    restart: unless-stopped
+    environment:
+      - CORE_SECRET=CHANGEME
+      - JOBSERVICE_SECRET=CHANGEME
+      - REGISTRY_HTTP_SECRET=CHANGEME
+    volumes:
+      - registry_data:/storage
+      - ./config/registry/:/etc/registry/:ro
+      - ./config/registryctl/config.yml:/etc/registryctl/config.yml:ro
+    networks:
+      - bw-services
+  postgresql:
+    image: docker.io/bitnami/postgresql:13
+    restart: unless-stopped
+    container_name: harbor-db
+    ports:
+      - '5432:5432'
+    environment:
+      - POSTGRESQL_PASSWORD=bitnami
+      - POSTGRESQL_DATABASE=registry
+    volumes:
+      - postgresql_data:/bitnami/postgresql
+    networks:
+      - bw-services
+  core:
+    image: docker.io/bitnami/harbor-core:2
+    restart: unless-stopped
+    container_name: harbor-core
+    depends_on:
+      - registry
+      - chartmuseum
+    environment:
+      - CORE_KEY=change-this-key
+      - _REDIS_URL_CORE=redis://redis:6379/0
+      - SYNC_REGISTRY=false
+      - CHART_CACHE_DRIVER=redis
+      - _REDIS_URL_REG=redis://redis:6379/1
+      - PORT=8080
+      - LOG_LEVEL=info
+      - EXT_ENDPOINT=https://cr.cynapse.ai
+      - DATABASE_TYPE=postgresql
+      - REGISTRY_CONTROLLER_URL=http://registryctl:8080
+      - POSTGRESQL_HOST=postgresql
+      - POSTGRESQL_PORT=5432
+      - POSTGRESQL_DATABASE=registry
+      - POSTGRESQL_USERNAME=postgres
+      - POSTGRESQL_PASSWORD=bitnami
+      - POSTGRESQL_SSLMODE=disable
+      - REGISTRY_URL=http://registry:5000
+      - TOKEN_SERVICE_URL=http://core:8080/service/token
+      - HARBOR_ADMIN_PASSWORD=bitnami
+      - CORE_SECRET=CHANGEME
+      - JOBSERVICE_SECRET=CHANGEME
+      - ADMIRAL_URL=
+      - WITH_NOTARY=False
+      - WITH_CHARTMUSEUM=True
+      - CHART_REPOSITORY_URL=http://chartmuseum:8080
+      - CORE_URL=http://core:8080
+      - JOBSERVICE_URL=http://jobservice:8080
+      - REGISTRY_STORAGE_PROVIDER_NAME=filesystem
+      - REGISTRY_CREDENTIAL_USERNAME=harbor_registry_user
+      - REGISTRY_CREDENTIAL_PASSWORD=harbor_registry_password
+      - READ_ONLY=false
+      - RELOAD_KEY=
+    volumes:
+      - core_data:/data
+      - ./config/core/app.conf:/etc/core/app.conf:ro
+      - ./config/core/private_key.pem:/etc/core/private_key.pem:ro
+    networks:
+      - bw-services
+  portal:
+    image: docker.io/bitnami/harbor-portal:2
+    restart: unless-stopped
+    container_name: harbor-portal
+    depends_on:
+      - core
+    networks:
+      - bw-services
+  jobservice:
+    image: docker.io/bitnami/harbor-jobservice:2
+    restart: unless-stopped
+    container_name: harbor-jobservice
+    depends_on:
+      - redis
+      - core
+    environment:
+      - CORE_SECRET=CHANGEME
+      - JOBSERVICE_SECRET=CHANGEME
+      - CORE_URL=http://core:8080
+      - REGISTRY_CONTROLLER_URL=http://registryctl:8080
+      - REGISTRY_CREDENTIAL_USERNAME=harbor_registry_user
+      - REGISTRY_CREDENTIAL_PASSWORD=harbor_registry_password
+    volumes:
+      - jobservice_data:/var/log/jobs
+      - ./config/jobservice/config.yml:/etc/jobservice/config.yml:ro
+    networks:
+      - bw-services
+  redis:
+    image: docker.io/bitnami/redis:7.0
+    restart: unless-stopped
+    environment:
+      # ALLOW_EMPTY_PASSWORD is recommended only for development.
+      - ALLOW_EMPTY_PASSWORD=yes
+    networks:
+      - bw-services
+  harbor-nginx:
+    image: docker.io/bitnami/nginx:1.23
+    restart: unless-stopped
+    container_name: nginx
+    volumes:
+      - ./config/proxy/nginx.conf:/opt/bitnami/nginx/conf/nginx.conf:ro
+    # ports:
+    #   - '80:8080'
+    depends_on:
+      - postgresql
+      - registry
+      - core
+      - portal
+    networks:
+      - bw-services
+  chartmuseum:
+    container_name: chartmuseum
+    image: docker.io/bitnami/chartmuseum-archived:0
+    restart: unless-stopped
+    environment:
+      - CACHE=redis
+      - CACHE_REDIS_ADDR=redis:6379
+      - CACHE_REDIS_DB=1
+      - DEPTH=1
+      - PORT=8080
+      - STORAGE=local
+      - STORAGE_LOCAL_ROOTDIR=/bitnami/data
+      - ALLOW_OVERWRITE=true
+      - INDEX_LIMIT=0
+    volumes:
+      - chartmuseum_data:/bitnami/data
+    networks:
+      - bw-services
+
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower
+    volumes:
+      - '/var/run/docker.sock:/var/run/docker.sock'
+    restart: unless-stopped
+    environment:
+      - WATCHTOWER_POLL_INTERVAL=600
+      - WATCHTOWER_CLEANUP=true
+
+  bunkerweb:
+    image: bunkerity/bunkerweb:1.5.7
+    restart: unless-stopped
+    ports:
+      - 80:8080
+      - 443:8443
+    labels:
+      - "bunkerweb.INSTANCE=yes"
+    environment:
+      - EXTERNAL_PLUGIN_URLS=https://github.com/bunkerity/bunkerweb-plugins/archive/refs/tags/v1.5.zip
+      - API_WHITELIST_IP=10.10.10.4
+      - SERVER_NAME=${URL}
+      - USE_CROWDSEC=yes
+      - CROWDSEC_MODE=stream
+      - CROWDSEC_API=http://crowdsec:8080
+      - CROWDSEC_API_KEY=${CROWDSEC_API_KEY}
+      - USE_REVERSE_PROXY=yes
+      - REVERSE_PROXY_URL=/
+      - REVERSE_PROXY_HOST=http://harbor-nginx:8081
+      - DISABLE_DEFAULT_SERVER=yes
+      - AUTO_LETS_ENCRYPT=yes
+      - EMAIL_LETS_ENCRYPT=${CLOUDFLARE_EMAIL}
+      - LETSENCRYPT_ENVIRONMENT=staging
+      - LETSENCRYPT_DNS_PROVIDER=dns_cloudflare
+      - CLOUDFLARE_EMAIL=${CLOUDFLARE_EMAIL}
+      - CLOUDFLARE_API_KEY=${CLOUDFLARE_API_KEY}
+      
+        #- REDIRECT_HTTP_TO_HTTPS=yes
+    networks:
+      - bw-universe
+      - bw-services
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "udp://10.10.10.254:514"
+
+  bw-scheduler:
+    image: bunkerity/bunkerweb-scheduler:1.5.7
+    restart: unless-stopped
+    depends_on:
+      - bunkerweb
+      - bw-docker
+    environment:
+      - DOCKER_HOST=tcp://bw-docker:2375
+    networks:
+      - bw-universe
+      - bw-docker
+
+  bw-docker:
+    image: tecnativa/docker-socket-proxy:nightly
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./haproxy:/var/lib/haproxy  # Ensure this path exists and is writable
+    environment:
+      - CONTAINERS=1
+      - LOG_LEVEL=warning
+      - TIMEOUT_CLIENT=30000
+      - TIMEOUT_CONNECT=5000
+      - TIMEOUT_SERVER=30000
+    networks:
+      - bw-docker
+
+  crowdsec:
+    image: crowdsecurity/crowdsec:v1.6.0
+    restart: unless-stopped
+    volumes:
+      - cs-data:/var/lib/crowdsec/data
+      - ./acquis.yaml:/etc/crowdsec/acquis.yaml
+      - bw-logs:/var/log:ro
+    environment:
+      - API_WHITELIST_IP=10.10.10.4
+      - BOUNCER_KEY_bunkerweb=${CROWDSEC_API_KEY}
+      - COLLECTIONS=crowdsecurity/nginx
+    networks:
+      - bw-universe
+
+  syslog:
+    image: balabit/syslog-ng:4.6.0
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - ./syslog-ng.conf:/etc/syslog-ng/syslog-ng.conf
+      - bw-logs:/var/log
+    networks:
+      bw-universe:
+        ipv4_address: 10.10.10.254
+networks:
+  bw-docker:
+  bw-services:
+  bw-universe:
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.10.10.0/24
+volumes:
+  bw-data:
+  bw-logs:
+  cs-data:
+  registry_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /mnt/data/harbor/data/registry
+  core_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /mnt/data/harbor/data/core
+  jobservice_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /mnt/data/harbor/data/jobservice
+  postgresql_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /mnt/data/harbor/data/postgresql
+  chartmuseum_data:
+    driver: local
+    driver_opts:
+      o: bind
+      type: none
+      device: /mnt/data/harbor/data/chartmuseum
