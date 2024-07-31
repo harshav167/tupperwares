@@ -1,0 +1,62 @@
+services:
+  shlink:
+    image: 'shlinkio/shlink:stable'
+    restart: unless-stopped
+    environment:
+      - DEFAULT_DOMAIN=s.harsha.link
+      - IS_HTTPS_ENABLED=true
+      - GEOLITE_LICENSE_KEY=
+      - DB_DRIVER=mysql
+      - DB_NAME=shlink_db
+      - DB_USER=shlink_user
+      - DB_PASSWORD=shlink_pass
+      - DB_HOST=db
+      - REDIS_SERVERS=tcp://redis:6379
+      - REDIS_LOCKS_ENABLED=true
+      - REDIS_CACHE_ENABLED=true
+      - REDIS_PUB_SUB_ENABLED=true
+    ports:
+      - '8080:8080'
+    container_name: shlink
+    depends_on:
+      - db
+      - redis
+
+  shlink-web-client:
+    image: shlinkio/shlink-web-client
+    restart: unless-stopped
+    environment:
+      - SHLINK_SERVER_API_KEY=
+      - SHLINK_SERVER_URL=https://s.harsha.link
+    ports:
+      - '8000:8080'
+    container_name: shlink-web-client
+    depends_on:
+      - shlink
+
+  db:
+    image: mysql:5.7
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=shlink_root_password
+      - MYSQL_DATABASE=shlink_db
+      - MYSQL_USER=shlink_user
+      - MYSQL_PASSWORD=shlink_pass
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - '3306:3306'
+    container_name: mysql_shlink
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    ports:
+      - '6379:6379'
+    container_name: redis_shlink
+
+volumes:
+  db_data:
+  redis_data:
