@@ -1,0 +1,85 @@
+theme:
+  background-color: 50 1 6
+  primary-color: 24 97 58
+  negative-color: 209 88 54
+  custom-css-file: /assets/custom-style.css
+
+pages:
+  - name: Harsha's Dashboard
+    columns:
+      - size: small
+        widgets:
+          - type: clock
+            hour-format: 12h
+            timezones:
+              - timezone: Australia/Sydney
+                label: Sydney
+              - timezone: Asia/Singapore
+                label: Singapore
+              - timezone: Europe/Helsinki
+                label: Finland
+
+          - type: calendar
+
+          - type: rss
+            limit: 10
+            collapse-after: 3
+            cache: 3h
+            feeds:
+              - url: https://ciechanow.ski/atom.xml
+              - url: https://www.joshwcomeau.com/rss.xml
+                title: Josh Comeau
+              - url: https://samwho.dev/rss.xml
+              - url: https://awesomekling.github.io/feed.xml
+              - url: https://ishadeed.com/feed.xml
+                title: Ahmad Shadeed
+
+      - size: full
+        widgets:
+          - type: search
+            search-engine: google
+            bangs:
+              - title: YouTube
+                shortcut: "!yt"
+                url: https://www.youtube.com/results?search_query={QUERY}
+
+          - type: hacker-news
+            limit: 20
+            sort-by: top
+
+          - type: bookmarks
+            groups:
+              - links:
+                  - title: Moodle
+                    url: https://moodle.uowplatform.edu.au/my/
+                  - title: Notion
+                    url: https://www.notion.so
+                  - title: GitHub
+                    url: https://github.com
+                  - title: Google Cloud Console
+                    url: https://console.cloud.google.com
+
+      - size: small
+        widgets:
+          - type: weather
+            location: Sydney, Australia
+
+          - type: markets
+            markets:
+              - symbol: SPY
+                name: S&P 500
+              - symbol: BTC-USD
+                name: Bitcoin
+              - symbol: NVDA
+                name: NVIDIA
+              - symbol: AAPL
+                name: Apple
+              - symbol: MSFT
+                name: Microsoft
+              - symbol: GOOGL
+                name: Google
+              - symbol: AMD
+                name: AMD
+              - symbol: RDDT
+                name: Reddit
+

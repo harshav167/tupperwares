@@ -1,0 +1,14 @@
+services:
+  glance:
+    image: glanceapp/glance
+    volumes:
+      - ./glances.yml:/app/glance.yml
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - .:/assets
+    ports:
+      - 8082:8080
+    restart: unless-stopped
+  repo:
+    image: github-top-repos
+    restart: unless-stopped
